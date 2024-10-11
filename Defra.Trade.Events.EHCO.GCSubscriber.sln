@@ -1,0 +1,73 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tst", "tst", "{AED954A0-C192-4E67-834E-080D52AA09AC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F5A9AE79-0E25-4CAD-9C39-550BC28385F4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Defra.Trade.Events.EHCO.GCSubscriber.Application", "src\Defra.Trade.Events.EHCO.GCSubscriber.Application\Defra.Trade.Events.EHCO.GCSubscriber.Application.csproj", "{821F0CB3-6C7F-48D9-A591-BFB9C49617D2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Defra.Trade.Events.EHCO.GCSubscriber.Application.UnitTests", "test\Defra.Trade.Events.EHCO.GCSubscriber.Application.UnitTests\Defra.Trade.Events.EHCO.GCSubscriber.Application.UnitTests.csproj", "{858FA045-7310-43AB-B879-F36FB9F2F2E8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Defra.Trade.Events.EHCO.GCSubscriber.Tests.Common", "test\Defra.Trade.Events.EHCO.GCSubscriber.Tests.Common\Defra.Trade.Events.EHCO.GCSubscriber.Tests.Common.csproj", "{06A4CCDB-BE2D-40BF-9231-CBE7D362DBA6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{97CD2522-0EF8-40A5-9103-DA594796B3F8}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		CONTRIBUTING.md = CONTRIBUTING.md
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "pipelines", "pipelines", "{CA595DC8-CE2C-4DA6-85B0-C43CE063B6C3}"
+	ProjectSection(SolutionItems) = preProject
+		pipelines\build.yaml = pipelines\build.yaml
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Defra.Trade.Events.EHCO.GCSubscriber", "src\Defra.Trade.Events.EHCO.GCSubscriber\Defra.Trade.Events.EHCO.GCSubscriber.csproj", "{434A1077-7667-4C8D-93E0-57828537DC84}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Defra.Trade.Events.EHCO.GCSubscriber.UnitTests", "test\Defra.Trade.Events.EHCO.GCSubscriber.UnitTests\Defra.Trade.Events.EHCO.GCSubscriber.UnitTests.csproj", "{927B421B-B38C-4AF5-8595-663E7DB30358}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{821F0CB3-6C7F-48D9-A591-BFB9C49617D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{821F0CB3-6C7F-48D9-A591-BFB9C49617D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{821F0CB3-6C7F-48D9-A591-BFB9C49617D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{821F0CB3-6C7F-48D9-A591-BFB9C49617D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{858FA045-7310-43AB-B879-F36FB9F2F2E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{858FA045-7310-43AB-B879-F36FB9F2F2E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{858FA045-7310-43AB-B879-F36FB9F2F2E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{858FA045-7310-43AB-B879-F36FB9F2F2E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06A4CCDB-BE2D-40BF-9231-CBE7D362DBA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06A4CCDB-BE2D-40BF-9231-CBE7D362DBA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06A4CCDB-BE2D-40BF-9231-CBE7D362DBA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06A4CCDB-BE2D-40BF-9231-CBE7D362DBA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{434A1077-7667-4C8D-93E0-57828537DC84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{434A1077-7667-4C8D-93E0-57828537DC84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{434A1077-7667-4C8D-93E0-57828537DC84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{434A1077-7667-4C8D-93E0-57828537DC84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{927B421B-B38C-4AF5-8595-663E7DB30358}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{927B421B-B38C-4AF5-8595-663E7DB30358}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{927B421B-B38C-4AF5-8595-663E7DB30358}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{927B421B-B38C-4AF5-8595-663E7DB30358}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{821F0CB3-6C7F-48D9-A591-BFB9C49617D2} = {F5A9AE79-0E25-4CAD-9C39-550BC28385F4}
+		{858FA045-7310-43AB-B879-F36FB9F2F2E8} = {AED954A0-C192-4E67-834E-080D52AA09AC}
+		{06A4CCDB-BE2D-40BF-9231-CBE7D362DBA6} = {AED954A0-C192-4E67-834E-080D52AA09AC}
+		{434A1077-7667-4C8D-93E0-57828537DC84} = {F5A9AE79-0E25-4CAD-9C39-550BC28385F4}
+		{927B421B-B38C-4AF5-8595-663E7DB30358} = {AED954A0-C192-4E67-834E-080D52AA09AC}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {832D0746-592A-45A1-B533-07CD521BD22A}
+	EndGlobalSection
+EndGlobal
