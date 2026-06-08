@@ -40,7 +40,10 @@ var host = new HostBuilder()
             .AddApimAuthentication(configuration.GetSection(InternalApimSettings.SectionName));
             
         services.AddOptions<InternalApimSettings>()
-            .Bind(configuration);
+            .Bind(configuration.GetSection(InternalApimSettings.SectionName));
+
+        services.AddOptions<ApimInternalSettings>()
+            .Bind(configuration.GetSection(InternalApimSettings.SectionName));
 
 
         var serviceProvider = services.BuildServiceProvider();
@@ -52,7 +55,7 @@ var host = new HostBuilder()
         var trimmedEndpoint = healthEndpoint.EndsWith("/health", StringComparison.OrdinalIgnoreCase)
             ? healthEndpoint[..^"/health".Length]
             : healthEndpoint;
-        var certificateStoreApiPath = $"{internalApimSettings.DaeraInternalCertificateStoreApi}{trimmedEndpoint}";
+        var certificateStoreApiPath = $"{internalApimSettings.BaseUrl}{internalApimSettings.DaeraInternalCertificateStoreApi}{trimmedEndpoint}";
 
         services
             .AddHealthChecks()
