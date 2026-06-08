@@ -3,15 +3,17 @@
 
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using Azure.Messaging.ServiceBus;
 using Defra.Trade.API.CertificatesStore.V1.ApiClient.Api;
 using Defra.Trade.API.CertificatesStore.V1.ApiClient.Client;
 using Defra.Trade.Common.Config;
-using Defra.Trade.Common.Functions;
-using Defra.Trade.Common.Functions.EventStore;
-using Defra.Trade.Common.Functions.Interfaces;
-using Defra.Trade.Common.Functions.Models;
-using Defra.Trade.Common.Functions.Services;
-using Defra.Trade.Common.Functions.Validation;
+using Defra.Trade.Common.Functions.Isolated;
+using Defra.Trade.Common.Functions.Isolated.EventStore;
+using Defra.Trade.Common.Functions.Isolated.Interfaces;
+using Defra.Trade.Common.Functions.Isolated.Models;
+using Defra.Trade.Common.Functions.Isolated.Services;
+using Defra.Trade.Common.Functions.Isolated.Validation;
 using Defra.Trade.Common.Infra.Infrastructure;
 using Defra.Trade.Common.Security.Authentication.Interfaces;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Dtos.Inbound;
@@ -24,6 +26,7 @@ using Defra.Trade.Events.EHCO.GCSubscriber.Validators;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Defra.Trade.Events.EHCO.GCSubscriber.Infrastructure;
 
@@ -32,6 +35,7 @@ public static class ServiceExtensions
 {
     public static IServiceCollection AddServiceRegistrations(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton<ISchemaValidator, SchemaValidator>();
         services.AddSingleton<ICustomValidatorFactory, CustomValidatorFactory>();
         services.AddSingleton<AbstractValidator<TradeEventMessageHeader>, GCMessageHeaderValidator>();
         services.AddSingleton<AbstractValidator<GeneralCertificateInbound>, GeneralCertificateInboundValidator>();
@@ -51,6 +55,16 @@ public static class ServiceExtensions
         services.AddScoped<IGeneralCertificateEnrichmentProcessor, GeneralCertificateEnrichmentProcessor>();
         services.AddScoped<IServiceBusManagerClient, ServiceBusManagerClient>();
         services.AddSingleton<IQueueClientFactory, QueueClientFactory>();
+        services.AddSingleton(sp =>
+        {
+#if DEBUG
+            string connectionString = configuration.GetValue<string>(GcSubscriberSettings.ConnectionStringConfigurationKey);
+            return new ServiceBusClient(connectionString);
+#else
+            string connectionString = configuration.GetValue<string>($"{GcSubscriberSettings.ConnectionStringConfigurationKey}FQN");
+            return new ServiceBusClient(connectionString, new Azure.Identity.DefaultAzureCredential());
+#endif
+        });
 
         var gcConfig = configuration.GetSection(GcSubscriberSettings.GcSubscriberSettingsName);
         services.AddOptions<GcSubscriberSettings>().Bind(gcConfig);

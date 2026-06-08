@@ -2,29 +2,29 @@
 // Licensed under the Open Government License v3.0.
 
 using System.Text;
-using Microsoft.Azure.ServiceBus;
+using Azure.Messaging.ServiceBus;
 
 namespace Defra.Trade.Events.EHCO.GCSubscriber.Application.Helpers;
 
 public class MessageBuilder
 {
-    private readonly Message _message = new();
+    private readonly ServiceBusMessage _message = new();
 
     public MessageBuilder WithUserProperty(string key, object value)
     {
-        _message.UserProperties.Add(key, value);
+        _message.ApplicationProperties.Add(key, value);
 
         return this;
     }
 
     public MessageBuilder WithBody(string body)
     {
-        _message.Body = Encoding.UTF8.GetBytes(body);
+        _message.Body = BinaryData.FromBytes(Encoding.UTF8.GetBytes(body));
 
         return this;
     }
 
-    public Message Build()
+    public ServiceBusMessage Build()
     {
         return _message;
     }
@@ -52,7 +52,7 @@ public class MessageBuilder
 
     public MessageBuilder Label(string label)
     {
-        _message.Label = label;
+        _message.Subject = label;
 
         return this;
     }

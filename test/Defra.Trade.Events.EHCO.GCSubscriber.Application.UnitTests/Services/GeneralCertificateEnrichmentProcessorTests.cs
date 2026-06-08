@@ -1,11 +1,11 @@
 ﻿// Copyright DEFRA (c). All rights reserved.
 // Licensed under the Open Government License v3.0.
 
-using Defra.Trade.Common.Functions.Models;
+using Azure.Messaging.ServiceBus;
+using Defra.Trade.Common.Functions.Isolated.Models;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Dtos.Inbound;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Services;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Services.Interfaces;
-using Microsoft.Azure.ServiceBus;
 using Microsoft.Extensions.Logging;
 
 namespace Defra.Trade.Events.EHCO.GCSubscriber.Application.UnitTests.Services;
@@ -35,7 +35,7 @@ public class GeneralCertificateEnrichmentProcessorTests
         var messageHeader = _fixture.Create<TradeEventMessageHeader>();
 
         _serviceBusManagerClient.Setup(x =>
-            x.SendMessageAsync(It.IsAny<Message>()))
+            x.SendMessageAsync(It.IsAny<ServiceBusMessage>()))
             .Returns(Task.CompletedTask)
             .Verifiable();
 
@@ -44,6 +44,6 @@ public class GeneralCertificateEnrichmentProcessorTests
 
         //Assert
         _serviceBusManagerClient.Verify(x =>
-            x.SendMessageAsync(It.IsAny<Message>()), Times.Once());
+            x.SendMessageAsync(It.IsAny<ServiceBusMessage>()), Times.Once());
     }
 }

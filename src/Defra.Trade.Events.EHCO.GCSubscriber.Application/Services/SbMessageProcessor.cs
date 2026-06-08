@@ -1,15 +1,15 @@
 ﻿// Copyright DEFRA (c). All rights reserved.
 // Licensed under the Open Government License v3.0.
 
+using Azure.Messaging.ServiceBus;
 using Defra.Trade.API.CertificatesStore.V1.ApiClient.Client;
-using Defra.Trade.Common.Functions.Extensions;
-using Defra.Trade.Common.Functions.Interfaces;
-using Defra.Trade.Common.Functions.Models;
+using Defra.Trade.Common.Functions.Isolated.Extensions;
+using Defra.Trade.Common.Functions.Isolated.Interfaces;
+using Defra.Trade.Common.Functions.Isolated.Models;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Dtos.Inbound;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Extensions;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Models;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Services.Interfaces;
-using Microsoft.Azure.ServiceBus;
 using Microsoft.Extensions.Logging;
 
 namespace Defra.Trade.Events.EHCO.GCSubscriber.Application.Services;
@@ -60,7 +60,7 @@ public class SbMessageProcessor(
 
             await context.RetryMessage(_messageRetryWindow, _messageRetryEnqueueTime, ex);
         }
-        catch (ServiceBusCommunicationException ex) when (_retry.Context is { } context)
+        catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.ServiceCommunicationProblem && _retry.Context is { } context)
         {
             _logger.SendingMessageToEnrichmentQueueFailure(
                 messageRequest.ExchangedDocument.Id,
