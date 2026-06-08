@@ -13,6 +13,7 @@ using Defra.Trade.Events.EHCO.GCSubscriber.Application;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Mappers;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Models;
 using Defra.Trade.Events.EHCO.GCSubscriber.Infrastructure;
+using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -52,7 +53,9 @@ var host = new HostBuilder()
             .AddCheck<AppSettingHealthCheck>("ServiceBus:ConnectionString")
             .AddCheck<AppSettingHealthCheck>("Apim:Internal:BaseUrl")
             .AddAzureServiceBusQueueCheck(serviceBusSettings, GcSubscriberSettings.DefaultQueueName)
-            .AddTradeApiHealthCheck($"{internalApimSettings.DaeraInternalCertificateStoreApi}{internalApimSettings.DaeraInternalCertificateStoreApiHealthEndpoint}");
+            .AddTradeInternalApiCheck<InternalApimSettings>(serviceProvider,
+                $"{internalApimSettings.DaeraInternalCertificateStoreApi}{internalApimSettings.DaeraInternalCertificateStoreApiHealthEndpoint}"
+            );
 
         var assembly = AppDomain.CurrentDomain.GetAssemblies().OrderBy(a => a.FullName).ToList();
         services.AddAutoMapper(assembly);

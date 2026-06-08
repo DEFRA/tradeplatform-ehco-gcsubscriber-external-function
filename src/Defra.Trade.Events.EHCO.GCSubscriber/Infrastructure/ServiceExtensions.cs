@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Azure.Messaging.ServiceBus;
-using Defra.Trade.API.CertificatesStore.V1.ApiClient.Api;
+using DocStoreApi = Defra.Trade.API.CertificatesStore.V1.ApiClient.Api;
 using Defra.Trade.API.CertificatesStore.V1.ApiClient.Client;
 using Defra.Trade.Common.Config;
 using Defra.Trade.Common.Functions.Isolated;
@@ -27,6 +27,7 @@ using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Defra.Trade.Common.Function.Health.HealthChecks.ApiCheck;
 
 namespace Defra.Trade.Events.EHCO.GCSubscriber.Infrastructure;
 
@@ -84,8 +85,9 @@ public static class ServiceExtensions
     private static void AddClientApiServices(this IServiceCollection services)
     {
         services
-            .AddTransient<IEhcoGeneralCertificateApplicationApi>(provider => new EhcoGeneralCertificateApplicationApi(CreateConfigurationSettings(provider)))
-            .AddTransient<IHealthApi>(provider => new HealthApi(CreateConfigurationSettings(provider)));
+            .AddTransient<DocStoreApi.IEhcoGeneralCertificateApplicationApi>(provider => new DocStoreApi.EhcoGeneralCertificateApplicationApi(CreateConfigurationSettings(provider)))
+            .AddTransient<DocStoreApi.IHealthApi>(provider => new DocStoreApi.HealthApi(CreateConfigurationSettings(provider)))
+            .AddTransient<IHealthApi, DocStoreHealthApi>();
     }
 
     private static IServiceCollection AddMessageRetryService(this IServiceCollection services)
