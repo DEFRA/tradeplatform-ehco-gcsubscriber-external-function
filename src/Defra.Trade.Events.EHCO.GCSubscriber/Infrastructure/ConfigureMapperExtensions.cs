@@ -13,9 +13,6 @@ public static class ConfigureMapperExtensions
 {
     public static void ConfigureMapper(this IFunctionsHostBuilder hostBuilder)
     {
-        var assembly = AppDomain.CurrentDomain.GetAssemblies().OrderBy(a => a.FullName).ToList();
-        hostBuilder.Services.AddAutoMapper(assembly);
-
-        hostBuilder.Services.AddAutoMapper(typeof(GeneralCertificateRequestProfile).Assembly);
+        hostBuilder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(GeneralCertificateRequestProfile).Assembly));
     }
 }

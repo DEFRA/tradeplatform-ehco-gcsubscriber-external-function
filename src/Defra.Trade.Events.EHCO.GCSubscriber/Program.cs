@@ -47,16 +47,21 @@ var host = new HostBuilder()
         var internalApimSettings = serviceProvider.GetRequiredService<IOptions<InternalApimSettings>>().Value;
         var serviceBusSettings = serviceProvider.GetRequiredService<IOptions<ServiceBusSettings>>().Value;
 
+        var healthEndpoint = internalApimSettings.DaeraInternalCertificateStoreApiHealthEndpoint ?? string.Empty;
+        // Defra.Trade.Common.Function.Health 4.1.0+ appends "/health" itself, so strip it if already present.
+        var trimmedEndpoint = healthEndpoint.EndsWith("/health", StringComparison.OrdinalIgnoreCase)
+            ? healthEndpoint[..^"/health".Length]
+            : healthEndpoint;
+        var certificateStoreApiPath = $"{internalApimSettings.DaeraInternalCertificateStoreApi}{trimmedEndpoint}";
+
         services
             .AddHealthChecks()
             .AddCheck<AppSettingHealthCheck>("ServiceBus:ConnectionString")
             .AddCheck<AppSettingHealthCheck>("Apim:Internal:BaseUrl")
             .AddAzureServiceBusQueueCheck(serviceBusSettings, GcSubscriberSettings.DefaultQueueName)
-            .AddTradeApiHealthCheck($"{internalApimSettings.DaeraInternalCertificateStoreApi}{internalApimSettings.DaeraInternalCertificateStoreApiHealthEndpoint}");
+            .AddTradeApiHealthCheck(certificateStoreApiPath, "CertificateStoreApi");
 
-        var assembly = AppDomain.CurrentDomain.GetAssemblies().OrderBy(a => a.FullName).ToList();
-        services.AddAutoMapper(assembly);
-        services.AddAutoMapper(typeof(GeneralCertificateRequestProfile).Assembly);
+        services.AddAutoMapper(cfg => cfg.AddMaps(typeof(GeneralCertificateRequestProfile).Assembly));
     })
     .Build();
 
