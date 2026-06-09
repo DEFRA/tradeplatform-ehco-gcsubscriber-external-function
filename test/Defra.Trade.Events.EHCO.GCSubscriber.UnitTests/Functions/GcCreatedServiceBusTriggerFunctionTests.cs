@@ -132,4 +132,124 @@ public class GcCreatedServiceBusTriggerFunctionTests
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()),
             Times.Once);
     }
+
+    [Fact]
+    public void Constructor_WhenBaseMessageProcessorServiceIsNull_ThrowsArgumentNullException()
+    {
+        // Arrange & Act
+        var act = () => new GcCreatedServiceBusTriggerFunction(
+            null,
+            new Mock<IMessageRetryService>().Object,
+            new Mock<ServiceBusClient>().Object,
+            new Mock<ILogger<GcCreatedServiceBusTriggerFunction>>().Object);
+
+        // Assert
+        act.ShouldThrow<ArgumentNullException>()
+            .ParamName.ShouldBe("baseMessageProcessorService");
+    }
+
+    [Fact]
+    public void Constructor_WhenMessageRetryServiceIsNull_ThrowsArgumentNullException()
+    {
+        // Arrange & Act
+        var act = () => new GcCreatedServiceBusTriggerFunction(
+            new Mock<IBaseMessageProcessorService<GeneralCertificateInbound>>().Object,
+            null,
+            new Mock<ServiceBusClient>().Object,
+            new Mock<ILogger<GcCreatedServiceBusTriggerFunction>>().Object);
+
+        // Assert
+        act.ShouldThrow<ArgumentNullException>()
+            .ParamName.ShouldBe("messageRetryService");
+    }
+
+    [Fact]
+    public void Constructor_WhenServiceBusClientIsNull_ThrowsArgumentNullException()
+    {
+        // Arrange & Act
+        var act = () => new GcCreatedServiceBusTriggerFunction(
+            new Mock<IBaseMessageProcessorService<GeneralCertificateInbound>>().Object,
+            new Mock<IMessageRetryService>().Object,
+            null,
+            new Mock<ILogger<GcCreatedServiceBusTriggerFunction>>().Object);
+
+        // Assert
+        act.ShouldThrow<ArgumentNullException>()
+            .ParamName.ShouldBe("serviceBusClient");
+    }
+
+    [Fact]
+    public void Constructor_WhenLoggerIsNull_ThrowsArgumentNullException()
+    {
+        // Arrange & Act
+        var act = () => new GcCreatedServiceBusTriggerFunction(
+            new Mock<IBaseMessageProcessorService<GeneralCertificateInbound>>().Object,
+            new Mock<IMessageRetryService>().Object,
+            new Mock<ServiceBusClient>().Object,
+            null);
+
+        // Assert
+        act.ShouldThrow<ArgumentNullException>()
+            .ParamName.ShouldBe("logger");
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenTriggered_ShouldCallProcessAsyncOnMessageProcessorService()
+    {
+        // Arrange
+        const string Json = "{\"exchangedDocument\":{\"id\":\"GC-001\"}}";
+        var message = new ServiceBusReceivedMessageBuilder().WithBody(BinaryData.FromString(Json)).Build();
+        var executionContext = new Mock<FunctionContext>();
+        var mockFunctionDefinition = new Mock<FunctionDefinition>();
+        mockFunctionDefinition.Setup(x => x.Name).Returns(nameof(GcCreatedServiceBusTriggerFunction));
+        executionContext.Setup(x => x.FunctionDefinition).Returns(mockFunctionDefinition.Object);
+        executionContext.Setup(x => x.InvocationId).Returns(Guid.NewGuid().ToString());
+
+        _mockBaseMessageProcessorService
+            .Setup(x => x.ProcessAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                message,
+                It.IsAny<ServiceBusMessageActions>(),
+                It.IsAny<ServiceBusSender>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .ReturnsAsync(false)
+            .Verifiable();
+
+        // Act
+        await _sut.RunAsync(message, _mockServiceBusMessageActions.Object, executionContext.Object);
+
+        // Assert
+        _mockBaseMessageProcessorService.Verify(
+            x => x.ProcessAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                message,
+                It.IsAny<ServiceBusMessageActions>(),
+                It.IsAny<ServiceBusSender>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void Constructor_WithAllValidArguments_CreatesInstance()
+    {
+        // Arrange & Act
+        var sut = new GcCreatedServiceBusTriggerFunction(
+            new Mock<IBaseMessageProcessorService<GeneralCertificateInbound>>().Object,
+            new Mock<IMessageRetryService>().Object,
+            new Mock<ServiceBusClient>().Object,
+            new Mock<ILogger<GcCreatedServiceBusTriggerFunction>>().Object);
+
+        // Assert
+        sut.ShouldNotBeNull();
+    }
 }

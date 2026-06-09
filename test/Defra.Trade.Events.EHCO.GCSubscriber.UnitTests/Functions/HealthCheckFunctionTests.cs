@@ -96,4 +96,43 @@ public sealed class HealthCheckFunctionTests
         healthCheckResults[0].Status.ShouldBe("Unhealthy");
         healthCheckResults[1].Status.ShouldBe("Healthy");
     }
+
+    [Fact]
+    public async Task RunAsync_DegradedCheck_Returns500AndDegraded()
+    {
+        // arrange
+        var ct = CancellationToken.None;
+        var entries = new Dictionary<string, HealthReportEntry>()
+        {
+            {
+                "degraded check",
+                new HealthReportEntry(HealthStatus.Degraded,
+                "degraded check",
+                new TimeSpan(0, 0, 0, 2),
+                null,
+                null)
+            }
+        };
+
+        var healthReport = new HealthReport(
+            entries,
+            HealthStatus.Degraded,
+            new TimeSpan(0, 0, 0, 2));
+
+        _healthCheckService.Setup(s => s.CheckHealthAsync(null, ct)).ReturnsAsync(healthReport);
+
+        var httpRequest = new DefaultHttpContext();
+
+        // act
+        var response = await _sut.RunAsync(httpRequest.Request);
+
+        // assert
+        response.ShouldNotBeNull();
+        var result = response as ObjectResult;
+        result.StatusCode.ShouldBe(500);
+        var healthCheck = result.Value as HealthCheckResponse;
+        healthCheck.Status.ShouldBe("Degraded");
+        var healthCheckResults = healthCheck.Results.ToList();
+        healthCheckResults[0].Status.ShouldBe("Degraded");
+    }
 }
