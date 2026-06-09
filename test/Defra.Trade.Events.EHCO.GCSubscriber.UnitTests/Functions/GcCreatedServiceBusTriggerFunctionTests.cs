@@ -37,7 +37,7 @@ public class GcCreatedServiceBusTriggerFunctionTests
 
         var mockSender = new Mock<ServiceBusSender>();
         _mockServiceBusClient
-            .Setup(x => x.CreateSender(It.IsAny<string>(), It.IsAny<ServiceBusSenderOptions>()))
+            .Setup(x => x.CreateSender(It.IsAny<string>()))
             .Returns(mockSender.Object);
 
         _mockRetryService = fixture.Freeze<Mock<IMessageRetryService>>();
@@ -57,7 +57,7 @@ public class GcCreatedServiceBusTriggerFunctionTests
     }
 
     [Fact]
-    public void RunAsync_WhenTrigger_ShouldCallMessageProcessor()
+    public async Task RunAsync_WhenTrigger_ShouldCallMessageProcessor()
     {
         // Arrange
         const string Json = "{\"OrderId\":92,\"BillingAddress\":{\"CustomerAddressId\":null,\"FirstName\":\"Jamie\",\"LastName\":\"Bowman\",\"StreetAddress1\":\"123 Street\",\"StreetAddress2\":\"Apt #2\",\"City\":\"Saint Louis\",\"State\":\"MO\",\"PostalCode\":\"12345\",\"Country\":\"USA\"},\"ShippingAddress\":{\"CustomerAddressId\":null,\"FirstName\":\"Jamie\",\"LastName\":\"Bowman\",\"StreetAddress1\":\"123 Street\",\"StreetAddress2\":\"Apt #2\",\"City\":\"Saint Louis\",\"State\":\"MO\",\"PostalCode\":\"12345\",\"Country\":\"USA\"},\"Subtotal\":404,\"Tax\":28.28,\"Total\":432.28}";
@@ -87,11 +87,10 @@ public class GcCreatedServiceBusTriggerFunctionTests
             .Verifiable();
 
         // Act
-        var result = _sut.RunAsync(message, _mockServiceBusMessageActions.Object, executionContext.Object);
+        await _sut.RunAsync(message, _mockServiceBusMessageActions.Object, executionContext.Object);
 
         // Assert
-        _ = result.ShouldNotBeNull();
-        result.Status.ShouldBe(TaskStatus.RanToCompletion);
+        _mockBaseMessageProcessorService.Verify();
     }
 
     [Fact]

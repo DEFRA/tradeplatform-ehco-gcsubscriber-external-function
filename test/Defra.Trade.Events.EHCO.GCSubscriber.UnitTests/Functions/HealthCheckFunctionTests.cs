@@ -38,14 +38,15 @@ public sealed class HealthCheckFunctionTests
     public async Task RunAsync_HealthyCheck_Returns200AndHealthy()
     {
         // arrange
-        var ct = CancellationToken.None;
         var entries = new Dictionary<string, HealthReportEntry>();
         var healthReport = new HealthReport(
             entries,
             HealthStatus.Healthy,
             new TimeSpan(0, 0, 1, 31));
 
-        _healthCheckService.Setup(s => s.CheckHealthAsync(null, ct)).ReturnsAsync(healthReport);
+        _healthCheckService
+            .Setup(s => s.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(healthReport);
 
         var httpRequest = new DefaultHttpContext();
 
@@ -63,7 +64,6 @@ public sealed class HealthCheckFunctionTests
     public async Task RunAsync_UnhealthyCheck_Returns500AndUnhealthy()
     {
         // arrange
-        var ct = CancellationToken.None;
         var entries = new Dictionary<string, HealthReportEntry>()
         {
             {
@@ -89,7 +89,9 @@ public sealed class HealthCheckFunctionTests
             HealthStatus.Unhealthy,
             new TimeSpan(0, 0, 1, 31));
 
-        _healthCheckService.Setup(s => s.CheckHealthAsync(null, ct)).ReturnsAsync(healthReport);
+        _healthCheckService
+            .Setup(s => s.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(healthReport);
 
         var httpRequest = new DefaultHttpContext();
 
@@ -111,7 +113,6 @@ public sealed class HealthCheckFunctionTests
     public async Task RunAsync_DegradedCheck_Returns500AndDegraded()
     {
         // arrange
-        var ct = CancellationToken.None;
         var entries = new Dictionary<string, HealthReportEntry>()
         {
             {
@@ -129,7 +130,9 @@ public sealed class HealthCheckFunctionTests
             HealthStatus.Degraded,
             new TimeSpan(0, 0, 0, 2));
 
-        _healthCheckService.Setup(s => s.CheckHealthAsync(null, ct)).ReturnsAsync(healthReport);
+        _healthCheckService
+            .Setup(s => s.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(healthReport);
 
         var httpRequest = new DefaultHttpContext();
 
