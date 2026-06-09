@@ -25,6 +25,16 @@ public sealed class HealthCheckFunctionTests
     }
 
     [Fact]
+    public void Constructor_WithValidArguments_CreatesInstance()
+    {
+        // Arrange & Act
+        var sut = new HealthCheckFunction(new Mock<HealthCheckService>().Object);
+
+        // Assert
+        sut.ShouldNotBeNull();
+    }
+
+    [Fact]
     public async Task RunAsync_HealthyCheck_Returns200AndHealthy()
     {
         // arrange
