@@ -11,7 +11,7 @@
     <PackageVersion Include="Azure.Security.KeyVault.Certificates" Version="4.7.0" />
     <!-- DEFRA -->
     <PackageVersion Include="Defra.Trade.API.CertificatesStore.V1.ApiClient" Version="2.5.0" />
-    <PackageVersion Include="Defra.Trade.Common.Function.Health" Version="4.1.2-pre" />
+    <PackageVersion Include="Defra.Trade.Common.Function.Health" Version="4.1.4" />
     <PackageVersion Include="Defra.Trade.Common.Functions.Isolated" Version="2.0.0" />
     <PackageVersion Include="Defra.Trade.Common.Logging" Version="3.0.1" />
     <!-- Azure Functions -->
