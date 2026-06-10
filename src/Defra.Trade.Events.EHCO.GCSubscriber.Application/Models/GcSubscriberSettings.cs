@@ -34,7 +34,7 @@ public class GcSubscriberSettings
     public const string DefaultQueueName = "defra.trade.ehco.remos.create";
 #endif
 
-    public const string TradeEventInfo = Common.Functions.Constants.QueueName.DefaultEventsInfoQueueName;
+    public const string TradeEventInfo = Common.Functions.Isolated.Constants.QueueName.DefaultEventsInfoQueueName;
 
     public static class MessageRetry
     {

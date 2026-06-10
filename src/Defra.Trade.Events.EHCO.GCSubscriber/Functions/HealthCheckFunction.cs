@@ -5,8 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using Defra.Trade.Common.Function.Health.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Defra.Trade.Events.EHCO.GCSubscriber.Functions;
@@ -27,7 +26,7 @@ public class HealthCheckFunction(HealthCheckService healthCheckService)
     /// </summary>
     /// <param name="request"></param>
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-    [FunctionName(nameof(HealthCheckFunction))]
+    [Function(nameof(HealthCheckFunction))]
     [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Parameter required")]
     public async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "health")] HttpRequest request)
     {

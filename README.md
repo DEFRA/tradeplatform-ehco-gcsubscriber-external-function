@@ -7,7 +7,10 @@ To run this function, you will need a `.\src\Defra.Trade.Events.EHCO.GCSubscribe
   "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AZURE_TENANT_ID": "<secret>",
+    "AZURE_CLIENT_ID": "<secret>",
+    "AZURE_CLIENT_SECRET": "<secret>",
     "ServiceBus:ConnectionString": "<secret>",
     "ConfigurationServer:ConnectionString": "<secret>",
     "ConfigurationServer:TenantId": "<secret>"

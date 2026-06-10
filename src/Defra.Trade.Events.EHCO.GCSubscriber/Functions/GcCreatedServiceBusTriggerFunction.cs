@@ -2,16 +2,14 @@
 // Licensed under the Open Government License v3.0.
 
 using Azure.Messaging.ServiceBus;
-using Defra.Trade.Common.Functions;
-using Defra.Trade.Common.Functions.Interfaces;
+using Defra.Trade.Common.Functions.Isolated;
+using Defra.Trade.Common.Functions.Isolated.Interfaces;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Dtos.Inbound;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Extensions;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Models;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.ServiceBus;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using ServiceBusMessage = Azure.Messaging.ServiceBus.ServiceBusMessage;
 
 namespace Defra.Trade.Events.EHCO.GCSubscriber.Functions;
 
@@ -19,30 +17,32 @@ public class GcCreatedServiceBusTriggerFunction
 {
     private readonly IBaseMessageProcessorService<GeneralCertificateInbound> _baseMessageProcessorService;
     private readonly IMessageRetryService _messageRetryService;
+    private readonly ServiceBusClient _serviceBusClient;
+    private readonly ILogger<GcCreatedServiceBusTriggerFunction> _logger;
 
     public GcCreatedServiceBusTriggerFunction(
         IBaseMessageProcessorService<GeneralCertificateInbound> baseMessageProcessorService,
-        IMessageRetryService messageRetryService)
+        IMessageRetryService messageRetryService,
+        ServiceBusClient serviceBusClient,
+        ILogger<GcCreatedServiceBusTriggerFunction> logger)
     {
         ArgumentNullException.ThrowIfNull(baseMessageProcessorService);
         ArgumentNullException.ThrowIfNull(messageRetryService);
+        ArgumentNullException.ThrowIfNull(serviceBusClient);
+        ArgumentNullException.ThrowIfNull(logger);
         _baseMessageProcessorService = baseMessageProcessorService;
         _messageRetryService = messageRetryService;
+        _serviceBusClient = serviceBusClient;
+        _logger = logger;
     }
 
-    [ServiceBusAccount(GcSubscriberSettings.ConnectionStringConfigurationKey)]
-    [FunctionName(nameof(GcCreatedServiceBusTriggerFunction))]
+    [Function(nameof(GcCreatedServiceBusTriggerFunction))]
     public async Task RunAsync(
-        [ServiceBusTrigger(queueName: GcSubscriberSettings.DefaultQueueName, IsSessionsEnabled = false)] ServiceBusReceivedMessage message,
+        [ServiceBusTrigger(GcSubscriberSettings.DefaultQueueName, Connection = GcSubscriberSettings.ConnectionStringConfigurationKey, IsSessionsEnabled = false)] ServiceBusReceivedMessage message,
         ServiceBusMessageActions messageActions,
-        ExecutionContext executionContext,
-        [ServiceBus(GcSubscriberSettings.TradeEventInfo)] IAsyncCollector<ServiceBusMessage> eventStoreCollector,
-        [ServiceBus(GcSubscriberSettings.DefaultQueueName)] IAsyncCollector<ServiceBusMessage> retryQueue,
-        ILogger logger)
+        FunctionContext executionContext)
     {
-        _messageRetryService.SetContext(message, retryQueue);
-
-        await RunInternalAsync(message, messageActions, eventStoreCollector, executionContext, logger);
+        await RunInternalAsync(message, messageActions, executionContext);
     }
 
     private static string GetGcId(BinaryData messageBody)
@@ -53,32 +53,36 @@ public class GcCreatedServiceBusTriggerFunction
     }
 
     private async Task RunInternalAsync(
-            ServiceBusReceivedMessage message,
-        ServiceBusMessageActions messageReceiver,
-        IAsyncCollector<ServiceBusMessage> eventStoreCollector,
-        ExecutionContext executionContext, ILogger logger)
+        ServiceBusReceivedMessage message,
+        ServiceBusMessageActions messageActions,
+        FunctionContext executionContext)
     {
         try
         {
             string gcId = GetGcId(message.Body);
 
-            logger.MessageReceived(message.MessageId, executionContext.FunctionName, gcId);
+            _logger.MessageReceived(message.MessageId, executionContext.FunctionDefinition.Name, gcId);
 
-            await _baseMessageProcessorService.ProcessAsync(executionContext.InvocationId.ToString(),
+            await using var eventStoreSender = _serviceBusClient.CreateSender(GcSubscriberSettings.TradeEventInfo);
+            await using var retrySender = _serviceBusClient.CreateSender(GcSubscriberSettings.DefaultQueueName);
+
+            _messageRetryService.SetContext(message, retrySender);
+
+            await _baseMessageProcessorService.ProcessAsync(executionContext.InvocationId,
                 GcSubscriberSettings.DefaultQueueName,
                 GcSubscriberSettings.PublisherId,
                 message,
-                messageReceiver,
-                eventStoreCollector,
+                messageActions,
+                eventStoreSender,
                 originalCrmPublisherId: GcSubscriberSettings.PublisherId,
                 originalSource: GcSubscriberSettings.DefaultQueueName,
                 originalRequestName: "Create");
 
-            logger.ProcessMessageSuccess(message.MessageId, executionContext.FunctionName, gcId);
+            _logger.ProcessMessageSuccess(message.MessageId, executionContext.FunctionDefinition.Name, gcId);
         }
         catch (Exception ex)
         {
-            logger.LogCritical(ex, ex.Message);
+            _logger.LogCritical(ex, ex.Message);
         }
     }
 }

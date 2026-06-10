@@ -4,7 +4,8 @@
 using System.Text.Json;
 using System.Threading;
 using AutoMapper;
-using Defra.Trade.Common.Functions.Models;
+using Azure.Messaging.ServiceBus;
+using Defra.Trade.Common.Functions.Isolated.Models;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Dtos.Inbound;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Extensions;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Helpers;
@@ -41,7 +42,7 @@ public class GeneralCertificateEnrichmentProcessor(
         _logger.SendingMessageToEnrichmentQueueSuccess(messageRequest.ExchangedDocument.Id);
     }
 
-    private static Message BuildMessage(IMapper mapper, GeneralCertificateRequest messageRequest, TradeEventMessageHeader messageHeader)
+    private static ServiceBusMessage BuildMessage(IMapper mapper, GeneralCertificateRequest messageRequest, TradeEventMessageHeader messageHeader)
     {
         MessageBuilder messageBuilder = new();
 
