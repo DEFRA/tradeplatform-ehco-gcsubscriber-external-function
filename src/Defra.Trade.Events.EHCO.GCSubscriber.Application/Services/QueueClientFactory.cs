@@ -11,10 +11,14 @@ using Microsoft.Extensions.Options;
 namespace Defra.Trade.Events.EHCO.GCSubscriber.Application.Services;
 
 [ExcludeFromCodeCoverage]
-public class QueueClientFactory(IOptions<ServiceBusQueuesSettings> serviceBusQueuesSettings) : IQueueClientFactory
+public class QueueClientFactory(
+    IOptions<ServiceBusQueuesSettings> serviceBusQueuesSettings,
+    ServiceBusClient serviceBusClient) : IQueueClientFactory
 {
     private readonly IOptions<ServiceBusQueuesSettings> _serviceBusQueuesSettings = serviceBusQueuesSettings
         ?? throw new ArgumentNullException(nameof(serviceBusQueuesSettings));
+    private readonly ServiceBusClient _serviceBusClient = serviceBusClient
+        ?? throw new ArgumentNullException(nameof(serviceBusClient));
 
     private readonly ConcurrentDictionary<string, ServiceBusSender> _senders = new();
 
@@ -22,9 +26,6 @@ public class QueueClientFactory(IOptions<ServiceBusQueuesSettings> serviceBusQue
     {
         var settings = _serviceBusQueuesSettings.Value;
         return _senders.GetOrAdd(settings.QueueNameEhcoRemosEnrichment, (queueName) =>
-        {
-            var client = new ServiceBusClient(settings.ConnectionString);
-            return client.CreateSender(queueName);
-        });
+            _serviceBusClient.CreateSender(queueName));
     }
 }
