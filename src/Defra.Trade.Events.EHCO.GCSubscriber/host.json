@@ -4,13 +4,8 @@
         "applicationInsights": {
             "samplingSettings": {
                 "isEnabled": true,
-                "excludedTypes": "Request",
-                "maxTelemetryItemsPerSecond": 200
-            },
-            "enableLiveMetricsFilters": true
+                "excludedTypes": "Request"
+            }
         },
-        "logLevel": {
-            "default": "Information"
-        }
     }
 }

@@ -9,8 +9,6 @@
 		<PackageReference Include="Defra.Trade.API.CertificatesStore.V1.ApiClient" />
 		<PackageReference Include="Defra.Trade.Common.Function.Health" />
 		<PackageReference Include="Defra.Trade.Common.Functions.Isolated" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
 		<PackageReference Include="AutoMapper" />
-		<PackageReference Include="Microsoft.Extensions.Logging" />
 	</ItemGroup>
 </Project>

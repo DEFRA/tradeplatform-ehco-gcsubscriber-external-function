@@ -32,7 +32,7 @@ using Defra.Trade.Common.Function.Health.HealthChecks.ApiCheck;
 namespace Defra.Trade.Events.EHCO.GCSubscriber.Infrastructure;
 
 [ExcludeFromCodeCoverage]
-public static class ServiceExtensions
+public static class ServiceExtensionsdd
 {
     public static IServiceCollection AddServiceRegistrations(this IServiceCollection services, IConfiguration configuration)
     {
