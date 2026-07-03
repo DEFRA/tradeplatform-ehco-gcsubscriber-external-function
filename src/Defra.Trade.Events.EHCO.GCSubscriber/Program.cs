@@ -13,7 +13,7 @@ using Defra.Trade.Events.EHCO.GCSubscriber.Application;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Mappers;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Models;
 using Defra.Trade.Events.EHCO.GCSubscriber.Infrastructure;
-using Google.Protobuf.WellKnownTypes;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -35,6 +35,8 @@ var host = new HostBuilder()
         var configuration = context.Configuration;
 
         services
+            .AddApplicationInsightsTelemetryWorkerService()
+            .ConfigureFunctionsApplicationInsights()
             .AddTradeAppConfiguration(configuration)
             .AddServiceRegistrations(configuration)
             .AddApplication()
