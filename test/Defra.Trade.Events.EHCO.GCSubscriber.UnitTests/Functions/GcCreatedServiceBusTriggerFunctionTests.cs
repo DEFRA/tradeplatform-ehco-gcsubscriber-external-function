@@ -4,18 +4,16 @@
 using AutoFixture;
 using AutoFixture.AutoMoq;
 using Azure.Messaging.ServiceBus;
-using Defra.Trade.Common.Functions;
+using Defra.Trade.Common.Functions.Isolated;
+using Defra.Trade.Common.Functions.Isolated.Interfaces;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Dtos.Inbound;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Models;
 using Defra.Trade.Events.EHCO.GCSubscriber.Functions;
 using Defra.Trade.Events.EHCO.GCSubscriber.UnitTests.FunctionTestExtensions;
 using Defra.Trade.Events.EHCO.GCSubscriber.UnitTests.Helpers;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.ServiceBus;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Shouldly;
-using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
-using ServiceBusMessage = Azure.Messaging.ServiceBus.ServiceBusMessage;
 
 namespace Defra.Trade.Events.EHCO.GCSubscriber.UnitTests.Functions;
 
@@ -23,20 +21,32 @@ public class GcCreatedServiceBusTriggerFunctionTests
 {
     private readonly GcCreatedServiceBusTriggerFunction _sut;
     private readonly Mock<IBaseMessageProcessorService<GeneralCertificateInbound>> _mockBaseMessageProcessorService;
-    private readonly Mock<ILogger> _mockLogger;
+    private readonly Mock<ILogger<GcCreatedServiceBusTriggerFunction>> _mockLogger;
     private readonly Mock<ServiceBusMessageActions> _mockServiceBusMessageActions;
-    private readonly Mock<IAsyncCollector<ServiceBusMessage>> _mockRetryQueue;
+    private readonly Mock<ServiceBusClient> _mockServiceBusClient;
+    private readonly Mock<IMessageRetryService> _mockRetryService;
 
     public GcCreatedServiceBusTriggerFunctionTests()
     {
         var fixture = new Fixture().Customize(new AutoMoqCustomization());
 
         _mockBaseMessageProcessorService = fixture.Freeze<Mock<IBaseMessageProcessorService<GeneralCertificateInbound>>>();
-        _mockLogger = fixture.Freeze<Mock<ILogger>>();
+        _mockLogger = fixture.Freeze<Mock<ILogger<GcCreatedServiceBusTriggerFunction>>>();
         _mockServiceBusMessageActions = new Mock<ServiceBusMessageActions>();
-        _mockRetryQueue = fixture.Freeze<Mock<IAsyncCollector<ServiceBusMessage>>>();
+        _mockServiceBusClient = new Mock<ServiceBusClient>();
 
-        _sut = fixture.Create<GcCreatedServiceBusTriggerFunction>();
+        var mockSender = new Mock<ServiceBusSender>();
+        _mockServiceBusClient
+            .Setup(x => x.CreateSender(It.IsAny<string>()))
+            .Returns(mockSender.Object);
+
+        _mockRetryService = fixture.Freeze<Mock<IMessageRetryService>>();
+
+        _sut = new GcCreatedServiceBusTriggerFunction(
+            _mockBaseMessageProcessorService.Object,
+            _mockRetryService.Object,
+            _mockServiceBusClient.Object,
+            _mockLogger.Object);
     }
 
     [Fact]
@@ -47,14 +57,18 @@ public class GcCreatedServiceBusTriggerFunctionTests
     }
 
     [Fact]
-    public void RunAsync_WhenTrigger_ShouldCallMessageProcessor()
+    public async Task RunAsync_WhenTrigger_ShouldCallMessageProcessor()
     {
         // Arrange
         const string Json = "{\"OrderId\":92,\"BillingAddress\":{\"CustomerAddressId\":null,\"FirstName\":\"Jamie\",\"LastName\":\"Bowman\",\"StreetAddress1\":\"123 Street\",\"StreetAddress2\":\"Apt #2\",\"City\":\"Saint Louis\",\"State\":\"MO\",\"PostalCode\":\"12345\",\"Country\":\"USA\"},\"ShippingAddress\":{\"CustomerAddressId\":null,\"FirstName\":\"Jamie\",\"LastName\":\"Bowman\",\"StreetAddress1\":\"123 Street\",\"StreetAddress2\":\"Apt #2\",\"City\":\"Saint Louis\",\"State\":\"MO\",\"PostalCode\":\"12345\",\"Country\":\"USA\"},\"Subtotal\":404,\"Tax\":28.28,\"Total\":432.28}";
 
         var message = new ServiceBusReceivedMessageBuilder().WithBody(BinaryData.FromString(Json)).Build();
 
-        var executionContext = new Mock<ExecutionContext>();
+        var executionContext = new Mock<FunctionContext>();
+        var mockFunctionDefinition = new Mock<FunctionDefinition>();
+        mockFunctionDefinition.Setup(x => x.Name).Returns(nameof(GcCreatedServiceBusTriggerFunction));
+        executionContext.Setup(x => x.FunctionDefinition).Returns(mockFunctionDefinition.Object);
+        executionContext.Setup(x => x.InvocationId).Returns(Guid.NewGuid().ToString());
 
         _mockBaseMessageProcessorService
             .Setup(x => x.ProcessAsync(
@@ -62,9 +76,8 @@ public class GcCreatedServiceBusTriggerFunctionTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 message,
-                _mockServiceBusMessageActions.Object,
-                It.IsAny<IAsyncCollector<ServiceBusMessage>>(),
-                It.IsAny<IAsyncCollector<ServiceBusMessage>>(),
+                It.IsAny<ServiceBusMessageActions>(),
+                It.IsAny<ServiceBusSender>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -74,11 +87,10 @@ public class GcCreatedServiceBusTriggerFunctionTests
             .Verifiable();
 
         // Act
-        var result = _sut.RunAsync(message, _mockServiceBusMessageActions.Object, executionContext.Object, null, _mockRetryQueue.Object, _mockLogger.Object);
+        await _sut.RunAsync(message, _mockServiceBusMessageActions.Object, executionContext.Object);
 
         // Assert
-        _ = result.ShouldNotBeNull();
-        result.Status.ShouldBe(TaskStatus.RanToCompletion);
+        _mockBaseMessageProcessorService.Verify();
     }
 
     [Fact]
@@ -89,7 +101,11 @@ public class GcCreatedServiceBusTriggerFunctionTests
 
         var message = new ServiceBusReceivedMessageBuilder().WithBody(BinaryData.FromString(Json)).Build();
         var exception = new Exception();
-        var executionContext = new Mock<ExecutionContext>();
+        var executionContext = new Mock<FunctionContext>();
+        var mockFunctionDefinition = new Mock<FunctionDefinition>();
+        mockFunctionDefinition.Setup(x => x.Name).Returns(nameof(GcCreatedServiceBusTriggerFunction));
+        executionContext.Setup(x => x.FunctionDefinition).Returns(mockFunctionDefinition.Object);
+        executionContext.Setup(x => x.InvocationId).Returns(Guid.NewGuid().ToString());
         _mockBaseMessageProcessorService.Setup(
             x => x.ProcessAsync(
                 It.IsAny<string>(),
@@ -97,15 +113,14 @@ public class GcCreatedServiceBusTriggerFunctionTests
                 It.IsAny<string>(),
                 It.IsAny<ServiceBusReceivedMessage>(),
                 It.IsAny<ServiceBusMessageActions>(),
-                It.IsAny<IAsyncCollector<ServiceBusMessage>>(),
-                It.IsAny<IAsyncCollector<ServiceBusMessage>>(),
+                It.IsAny<ServiceBusSender>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>())).Throws(exception);
 
         // Act
-        await _sut.RunAsync(message, _mockServiceBusMessageActions.Object, executionContext.Object, null, _mockRetryQueue.Object, _mockLogger.Object);
+        await _sut.RunAsync(message, _mockServiceBusMessageActions.Object, executionContext.Object);
 
         // Assert
         _mockLogger.Verify(
@@ -116,5 +131,206 @@ public class GcCreatedServiceBusTriggerFunctionTests
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()),
             Times.Once);
+    }
+
+    [Fact]
+    public void Constructor_WhenBaseMessageProcessorServiceIsNull_ThrowsArgumentNullException()
+    {
+        // Arrange & Act
+        var act = () => new GcCreatedServiceBusTriggerFunction(
+            null,
+            new Mock<IMessageRetryService>().Object,
+            new Mock<ServiceBusClient>().Object,
+            new Mock<ILogger<GcCreatedServiceBusTriggerFunction>>().Object);
+
+        // Assert
+        act.ShouldThrow<ArgumentNullException>()
+            .ParamName.ShouldBe("baseMessageProcessorService");
+    }
+
+    [Fact]
+    public void Constructor_WhenMessageRetryServiceIsNull_ThrowsArgumentNullException()
+    {
+        // Arrange & Act
+        var act = () => new GcCreatedServiceBusTriggerFunction(
+            new Mock<IBaseMessageProcessorService<GeneralCertificateInbound>>().Object,
+            null,
+            new Mock<ServiceBusClient>().Object,
+            new Mock<ILogger<GcCreatedServiceBusTriggerFunction>>().Object);
+
+        // Assert
+        act.ShouldThrow<ArgumentNullException>()
+            .ParamName.ShouldBe("messageRetryService");
+    }
+
+    [Fact]
+    public void Constructor_WhenServiceBusClientIsNull_ThrowsArgumentNullException()
+    {
+        // Arrange & Act
+        var act = () => new GcCreatedServiceBusTriggerFunction(
+            new Mock<IBaseMessageProcessorService<GeneralCertificateInbound>>().Object,
+            new Mock<IMessageRetryService>().Object,
+            null,
+            new Mock<ILogger<GcCreatedServiceBusTriggerFunction>>().Object);
+
+        // Assert
+        act.ShouldThrow<ArgumentNullException>()
+            .ParamName.ShouldBe("serviceBusClient");
+    }
+
+    [Fact]
+    public void Constructor_WhenLoggerIsNull_ThrowsArgumentNullException()
+    {
+        // Arrange & Act
+        var act = () => new GcCreatedServiceBusTriggerFunction(
+            new Mock<IBaseMessageProcessorService<GeneralCertificateInbound>>().Object,
+            new Mock<IMessageRetryService>().Object,
+            new Mock<ServiceBusClient>().Object,
+            null);
+
+        // Assert
+        act.ShouldThrow<ArgumentNullException>()
+            .ParamName.ShouldBe("logger");
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenTriggered_ShouldCallProcessAsyncOnMessageProcessorService()
+    {
+        // Arrange
+        const string Json = "{\"exchangedDocument\":{\"id\":\"GC-001\"}}";
+        var message = new ServiceBusReceivedMessageBuilder().WithBody(BinaryData.FromString(Json)).Build();
+        var executionContext = new Mock<FunctionContext>();
+        var mockFunctionDefinition = new Mock<FunctionDefinition>();
+        mockFunctionDefinition.Setup(x => x.Name).Returns(nameof(GcCreatedServiceBusTriggerFunction));
+        executionContext.Setup(x => x.FunctionDefinition).Returns(mockFunctionDefinition.Object);
+        executionContext.Setup(x => x.InvocationId).Returns(Guid.NewGuid().ToString());
+
+        _mockBaseMessageProcessorService
+            .Setup(x => x.ProcessAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                message,
+                It.IsAny<ServiceBusMessageActions>(),
+                It.IsAny<ServiceBusSender>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .ReturnsAsync(false)
+            .Verifiable();
+
+        // Act
+        await _sut.RunAsync(message, _mockServiceBusMessageActions.Object, executionContext.Object);
+
+        // Assert
+        _mockBaseMessageProcessorService.Verify(
+            x => x.ProcessAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                message,
+                It.IsAny<ServiceBusMessageActions>(),
+                It.IsAny<ServiceBusSender>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenSuccessful_ShouldCallSetContextOnRetryService()
+    {
+        // Arrange
+        const string Json = "{\"exchangedDocument\":{\"id\":\"GC-001\"}}";
+        var message = new ServiceBusReceivedMessageBuilder().WithBody(BinaryData.FromString(Json)).Build();
+        var executionContext = new Mock<FunctionContext>();
+        var mockFunctionDefinition = new Mock<FunctionDefinition>();
+        mockFunctionDefinition.Setup(x => x.Name).Returns(nameof(GcCreatedServiceBusTriggerFunction));
+        executionContext.Setup(x => x.FunctionDefinition).Returns(mockFunctionDefinition.Object);
+        executionContext.Setup(x => x.InvocationId).Returns(Guid.NewGuid().ToString());
+
+        _mockBaseMessageProcessorService
+            .Setup(x => x.ProcessAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                message,
+                It.IsAny<ServiceBusMessageActions>(),
+                It.IsAny<ServiceBusSender>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        // Act
+        await _sut.RunAsync(message, _mockServiceBusMessageActions.Object, executionContext.Object);
+
+        // Assert
+        _mockRetryService.Verify(
+            x => x.SetContext(message, It.IsAny<ServiceBusSender>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenSuccessful_ShouldPassCorrectConstantsToProcessAsync()
+    {
+        // Arrange
+        const string Json = "{\"exchangedDocument\":{\"id\":\"GC-001\"}}";
+        var invocationId = Guid.NewGuid().ToString();
+        var message = new ServiceBusReceivedMessageBuilder().WithBody(BinaryData.FromString(Json)).Build();
+        var executionContext = new Mock<FunctionContext>();
+        var mockFunctionDefinition = new Mock<FunctionDefinition>();
+        mockFunctionDefinition.Setup(x => x.Name).Returns(nameof(GcCreatedServiceBusTriggerFunction));
+        executionContext.Setup(x => x.FunctionDefinition).Returns(mockFunctionDefinition.Object);
+        executionContext.Setup(x => x.InvocationId).Returns(invocationId);
+
+        _mockBaseMessageProcessorService
+            .Setup(x => x.ProcessAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                message,
+                It.IsAny<ServiceBusMessageActions>(),
+                It.IsAny<ServiceBusSender>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        // Act
+        await _sut.RunAsync(message, _mockServiceBusMessageActions.Object, executionContext.Object);
+
+        // Assert
+        _mockBaseMessageProcessorService.Verify(
+            x => x.ProcessAsync(
+                invocationId,
+                GcSubscriberSettings.DefaultQueueName,
+                GcSubscriberSettings.PublisherId,
+                message,
+                It.IsAny<ServiceBusMessageActions>(),
+                It.IsAny<ServiceBusSender>(),
+                It.IsAny<string>(),
+                GcSubscriberSettings.PublisherId,
+                GcSubscriberSettings.DefaultQueueName,
+                "Create"),
+            Times.Once);
+    }
+
+    [Fact]
+    public void Constructor_WithAllValidArguments_CreatesInstance()
+    {
+        // Arrange & Act
+        var sut = new GcCreatedServiceBusTriggerFunction(
+            new Mock<IBaseMessageProcessorService<GeneralCertificateInbound>>().Object,
+            new Mock<IMessageRetryService>().Object,
+            new Mock<ServiceBusClient>().Object,
+            new Mock<ILogger<GcCreatedServiceBusTriggerFunction>>().Object);
+
+        // Assert
+        sut.ShouldNotBeNull();
     }
 }

@@ -3,26 +3,29 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using Azure.Messaging.ServiceBus;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Infrastructure;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Services.Interfaces;
-using Microsoft.Azure.ServiceBus;
 using Microsoft.Extensions.Options;
 
 namespace Defra.Trade.Events.EHCO.GCSubscriber.Application.Services;
 
 [ExcludeFromCodeCoverage]
-public class QueueClientFactory(IOptions<ServiceBusQueuesSettings> serviceBusQueuesSettings) : IQueueClientFactory
+public class QueueClientFactory(
+    IOptions<ServiceBusQueuesSettings> serviceBusQueuesSettings,
+    ServiceBusClient serviceBusClient) : IQueueClientFactory
 {
     private readonly IOptions<ServiceBusQueuesSettings> _serviceBusQueuesSettings = serviceBusQueuesSettings
         ?? throw new ArgumentNullException(nameof(serviceBusQueuesSettings));
+    private readonly ServiceBusClient _serviceBusClient = serviceBusClient
+        ?? throw new ArgumentNullException(nameof(serviceBusClient));
 
-    private readonly ConcurrentDictionary<string, IQueueClient> _queueClients = new();
+    private readonly ConcurrentDictionary<string, ServiceBusSender> _senders = new();
 
-    public IQueueClient CreateQueueClient()
+    public ServiceBusSender CreateQueueClient()
     {
-        return _queueClients.GetOrAdd(_serviceBusQueuesSettings.Value.QueueNameEhcoRemosEnrichment, (key) =>
-        {
-            return new QueueClient(_serviceBusQueuesSettings.Value.ConnectionString, key, ReceiveMode.PeekLock, RetryExponential.Default);
-        });
+        var settings = _serviceBusQueuesSettings.Value;
+        return _senders.GetOrAdd(settings.QueueNameEhcoRemosEnrichment, (queueName) =>
+            _serviceBusClient.CreateSender(queueName));
     }
 }

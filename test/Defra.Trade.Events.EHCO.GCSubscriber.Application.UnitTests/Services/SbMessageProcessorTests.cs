@@ -6,14 +6,12 @@ using AutoFixture.Idioms;
 using AutoFixture.Xunit2;
 using Azure.Messaging.ServiceBus;
 using Defra.Trade.API.CertificatesStore.V1.ApiClient.Client;
-using Defra.Trade.Common.Functions.Interfaces;
-using Defra.Trade.Common.Functions.Models;
+using Defra.Trade.Common.Functions.Isolated.Interfaces;
+using Defra.Trade.Common.Functions.Isolated.Models;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Dtos.Inbound;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Models;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Services;
 using Defra.Trade.Events.EHCO.GCSubscriber.Application.Services.Interfaces;
-using Microsoft.Azure.ServiceBus;
-using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 
 namespace Defra.Trade.Events.EHCO.GCSubscriber.Application.UnitTests.Services;
@@ -27,7 +25,7 @@ public class SbMessageProcessorTests
     private readonly Mock<ServiceBusReceivedMessage> _mockMessage;
     private readonly Mock<IGcMessageProcessor> _mockMessageProcessor;
     private readonly Mock<IMessageRetryContextAccessor> _mockRetryAccessor;
-    private readonly Mock<IAsyncCollector<ServiceBusMessage>> _mockRetryQueue;
+    private readonly Mock<ServiceBusSender> _mockRetryQueue;
     private readonly SbMessageProcessor _sut;
 
     public SbMessageProcessorTests()
@@ -38,7 +36,7 @@ public class SbMessageProcessorTests
         _mockEnrichmentProcessor = new Mock<IGeneralCertificateEnrichmentProcessor>();
         _mockRetryAccessor = new Mock<IMessageRetryContextAccessor>();
         _mockMessage = _fixture.Freeze<Mock<ServiceBusReceivedMessage>>();
-        _mockRetryQueue = _fixture.Freeze<Mock<IAsyncCollector<ServiceBusMessage>>>();
+        _mockRetryQueue = _fixture.Freeze<Mock<ServiceBusSender>>();
 
         _sut = new SbMessageProcessor(
             _mockLogger.Object,
@@ -115,6 +113,10 @@ public class SbMessageProcessorTests
             .Setup(x => x.Context.Message)
             .Returns(_mockMessage.Object);
 
+        _mockRetryQueue
+            .Setup(x => x.ScheduleMessageAsync(It.IsAny<ServiceBusMessage>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0L);
+
         var mockGcCommand = _fixture.Create<GeneralCertificateRequest>();
         var mockApiException = new ApiException(errorCode, "mocked error");
 
@@ -139,20 +141,24 @@ public class SbMessageProcessorTests
             .Setup(x => x.Context.Message)
             .Returns(_mockMessage.Object);
 
+        _mockRetryQueue
+            .Setup(x => x.ScheduleMessageAsync(It.IsAny<ServiceBusMessage>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0L);
+
         var mockGcCommand = _fixture.Create<GeneralCertificateRequest>();
 
         _mockMessageProcessor
             .Setup(x => x.ProcessMessage(mockGcCommand))
             .Returns(Task.CompletedTask);
 
-        var ex = new ServiceBusCommunicationException("mock service bus communication error");
+        var ex = new ServiceBusException("mock service bus communication error", ServiceBusFailureReason.ServiceCommunicationProblem);
 
         _mockEnrichmentProcessor
             .Setup(x => x.SendMessageAsync(mockGcCommand, _messageHeader, CancellationToken.None))
             .Throws(ex);
 
         // Act
-        await Assert.ThrowsAsync<ServiceBusCommunicationException>(
+        await Assert.ThrowsAsync<ServiceBusException>(
             async () => await _sut.ProcessAsync(mockGcCommand, _messageHeader));
     }
 
